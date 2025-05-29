@@ -1,7 +1,4 @@
-tags
-test.sh
-.luarc.json
-nvim
-
-spell/
+*.backup
+*.swp
+*.tmp
 lazy-lock.json

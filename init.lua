@@ -283,6 +283,24 @@ require('lazy').setup({
       },
     },
   },
+  -- Autobrace
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    opts = {}, -- uses default settings
+  },
+
+  -- nvim tree setup
+  {
+    'nvim-tree/nvim-tree.lua',
+    dependencies = {
+      'nvim-tree/nvim-web-devicons', -- for file icons
+    },
+    config = function()
+      require('nvim-tree').setup()
+      vim.keymap.set('n', '<leader>e', ':NvimTreeToggle<CR>', { desc = 'Toggle file explorer' })
+    end,
+  },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
