@@ -121,6 +121,8 @@ end)
 -- Enable break indent
 vim.o.breakindent = true
 
+--Dark Background
+vim.o.background = 'dark'
 -- Save undo history
 vim.o.undofile = true
 
