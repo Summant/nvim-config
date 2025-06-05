@@ -1,91 +1,5 @@
---[[
-
-=====================================================================
-==================== READ THIS BEFORE CONTINUING ====================
-=====================================================================
-========                                    .-----.          ========
-========         .----------------------.   | === |          ========
-========         |.-""""""""""""""""""-.|   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||   KICKSTART.NVIM   ||   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||                    ||   |-----|          ========
-========         ||:Tutor              ||   |:::::|          ========
-========         |'-..................-'|   |____o|          ========
-========         `"")----------------(""`   ___________      ========
-========        /::::::::::|  |::::::::::\  \ no mouse \     ========
-========       /:::========|  |==hjkl==:::\  \ required \    ========
-========      '""""""""""""'  '""""""""""""'  '""""""""""'   ========
-========                                                     ========
-=====================================================================
-=====================================================================
-
-What is Kickstart?
-
-  Kickstart.nvim is *not* a distribution.
-
-  Kickstart.nvim is a starting point for your own configuration.
-    The goal is that you can read every line of code, top-to-bottom, understand
-    what your configuration is doing, and modify it to suit your needs.
-
-    Once you've done that, you can start exploring, configuring and tinkering to
-    make Neovim your own! That might mean leaving Kickstart just the way it is for a while
-    or immediately breaking it into modular pieces. It's up to you!
-
-    If you don't know anything about Lua, I recommend taking some time to read through
-    a guide. One possible example which will only take 10-15 minutes:
-      - https://learnxinyminutes.com/docs/lua/
-
-    After understanding a bit more about Lua, you can use `:help lua-guide` as a
-    reference for how Neovim integrates Lua.
-    - :help lua-guide
-    - (or HTML version): https://neovim.io/doc/user/lua-guide.html
-
-Kickstart Guide:
-
-  TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
-
-    If you don't know what this means, type the following:
-      - <escape key>
-      - :
-      - Tutor
-      - <enter key>
-
-    (If you already know the Neovim basics, you can skip this step.)
-
-  Once you've completed that, you can continue working through **AND READING** the rest
-  of the kickstart init.lua.
-
-  Next, run AND READ `:help`.
-    This will open up a help window with some basic information
-    about reading, navigating and searching the builtin help documentation.
-
-    This should be the first place you go to look when you're stuck or confused
-    with something. It's one of my favorite Neovim features.
-
-    MOST IMPORTANTLY, we provide a keymap "<space>sh" to [s]earch the [h]elp documentation,
-    which is very useful when you're not exactly sure of what you're looking for.
-
-  I have left several `:help X` comments throughout the init.lua
-    These are hints about where to find more information about the relevant settings,
-    plugins or Neovim features used in Kickstart.
-
-   NOTE: Look for lines like this
-
-    Throughout the file. These are for you, the reader, to help you understand what is happening.
-    Feel free to delete them once you know what you're doing, but they should serve as a guide
-    for when you are first encountering a few different constructs in your Neovim config.
-
-If you experience any errors while trying to install kickstart, run `:checkhealth` for more info.
-
-I hope you enjoy your Neovim journey,
-- TJ
-
-P.S. You can delete this when you're done too. It's your config now! :)
---]]
-
--- Set <space> as the leader key
--- See `:help mapleader`
+-- init.lua
+-- Setup For Neovim
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
@@ -117,12 +31,20 @@ vim.o.showmode = false
 vim.schedule(function()
   vim.o.clipboard = 'unnamedplus'
 end)
+-- Four space tab
+vim.opt.tabstop = 4 -- Number of visual spaces per TAB
+vim.opt.shiftwidth = 4 -- Number of spaces for each indent
+vim.opt.expandtab = true -- Use spaces instead of tabs
 
 -- Enable break indent
 vim.o.breakindent = true
 
 --Dark Background
 vim.o.background = 'dark'
+vim.opt.termguicolors = true
+vim.cmd 'highlight Normal guibg=#000000 ctermbg=NONE'
+vim.cmd 'highlight NormalNC guibg=#000000'
+
 -- Save undo history
 vim.o.undofile = true
 
@@ -248,6 +170,8 @@ rtp:prepend(lazypath)
 --
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
+  { 'nvim-neotest/nvim-nio' },
+
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
 
@@ -290,6 +214,75 @@ require('lazy').setup({
     'windwp/nvim-autopairs',
     event = 'InsertEnter',
     opts = {}, -- uses default settings
+  },
+  -- debugger
+  {
+    'rcarriga/nvim-dap-ui',
+    dependencies = {
+      'mfussenegger/nvim-dap',
+      'nvim-neotest/nvim-nio',
+    },
+    config = function()
+      local dap = require 'dap' -- 👈 ADD THIS LINE FIRST
+      local dapui = require 'dapui'
+      dap.adapters.lldb = {
+        type = 'executable',
+        command = '/usr/bin/lldb', -- or wherever lldb is installed
+        name = 'lldb',
+      }
+      dap.configurations.cpp = {
+        {
+          name = 'Launch C++ file',
+          type = 'lldb',
+          request = 'launch',
+          program = function()
+            return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+          end,
+          cwd = '${workspaceFolder}',
+          stopOnEntry = false,
+          args = {},
+        },
+      }
+      dap.configurations.c = dap.configurations.cpp
+
+      dapui.setup()
+
+      dap.listeners.after.event_initialized['dapui_config'] = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated['dapui_config'] = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited['dapui_config'] = function()
+        dapui.close()
+      end
+
+      -- keymaps
+      vim.keymap.set('n', '<F5>', function()
+        dap.continue()
+      end)
+      vim.keymap.set('n', '<F10>', function()
+        dap.step_over()
+      end)
+      vim.keymap.set('n', '<F11>', function()
+        dap.step_into()
+      end)
+      vim.keymap.set('n', '<F12>', function()
+        dap.step_out()
+      end)
+      vim.keymap.set('n', '<Leader>b', function()
+        dap.toggle_breakpoint()
+      end)
+      vim.keymap.set('n', '<Leader>B', function()
+        dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
+      end)
+      vim.keymap.set('n', '<Leader>dr', function()
+        dap.repl.open()
+      end)
+      vim.keymap.set('n', '<Leader>dl', function()
+        dap.run_last()
+      end)
+    end,
   },
 
   -- nvim tree setup
@@ -855,7 +848,7 @@ require('lazy').setup({
         -- <c-k>: Toggle signature help
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        preset = 'super-tab',
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -896,25 +889,27 @@ require('lazy').setup({
     },
   },
 
-  { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+  {
     'folke/tokyonight.nvim',
-    priority = 1000, -- Make sure to load this before all the other start plugins.
+    priority = 1000,
     config = function()
-      ---@diagnostic disable-next-line: missing-fields
       require('tokyonight').setup {
         styles = {
-          comments = { italic = false }, -- Disable italics in comments
+          comments = { italic = false },
         },
       }
 
-      -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+      -- Load the colorscheme
       vim.cmd.colorscheme 'tokyonight-night'
+
+      -- Force black background after the theme is applied
+      vim.cmd [[
+          highlight Normal guibg=#000000 ctermbg=NONE
+          highlight NormalNC guibg=#000000
+          highlight LineNr guibg=#000000
+          highlight SignColumn guibg=#000000
+          highlight VertSplit guibg=#000000
+        ]]
     end,
   },
 
@@ -1031,6 +1026,3 @@ require('lazy').setup({
     },
   },
 })
-
--- The line beneath this is called `modeline`. See `:help modeline`
--- vim: ts=2 sts=2 sw=2 et
