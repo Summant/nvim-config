@@ -433,12 +433,18 @@ require('lazy').setup({
         },
       }
 
-      -- Enable Telescope extensions if they are installed
-      pcall(require('telescope').load_extension, 'fzf')
-      pcall(require('telescope').load_extension, 'ui-select')
-
-      -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
+      local utils = require 'telescope.utils'
+
+      vim.keymap.set('n', '<C-p>', function()
+        local is_git_repo = utils.get_os_command_output({ 'git', 'rev-parse', '--is-inside-work-tree' })[1] == 'true'
+        if is_git_repo then
+          builtin.git_files { show_untracked = true }
+        else
+          builtin.find_files()
+        end
+      end, { desc = 'Smart file search (Git or all)' })
+
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
