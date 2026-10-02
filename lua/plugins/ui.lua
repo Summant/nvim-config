@@ -80,6 +80,10 @@ return {
           lualine_c = { { 'filename', path = 1, symbols = { modified = ' ●', readonly = ' ' } } },
           lualine_x = {
             { 'diagnostics', symbols = { error = ' ', warn = ' ', info = ' ', hint = ' ' } },
+            { function() -- Jupyter kernel, when one is running
+                local ok, nb = pcall(require, 'config.notebook')
+                return (ok and nb.status()) or ''
+              end, color = { fg = '#8ec9ff' } },
             { function() -- which LSPs are attached
                 local names = {}
                 for _, c in pairs(vim.lsp.get_clients { bufnr = 0 }) do names[#names + 1] = c.name end
@@ -144,6 +148,7 @@ return {
         { '<leader>d', group = '[D]ebug' },
         { '<leader>b', group = '[B]uffer' },
         { '<leader>x', group = 'Diagnostics' },
+        { '<leader>j', group = '[J]upyter / notebook' },
       },
     },
   },

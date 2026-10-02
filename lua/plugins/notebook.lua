@@ -148,34 +148,39 @@ return {
       vim.g.molten_output_virt_lines   = true
     end,
     keys = {
-      { '<leader>ji', '<cmd>MoltenInit<cr>',              desc = '[J]upyter [i]nit kernel' },
-      { '<leader>jl', '<cmd>MoltenEvaluateLine<cr>',      desc = '[J]upyter run [l]ine' },
-      { '<leader>jr', '<cmd>MoltenReevaluateCell<cr>',    desc = '[J]upyter [r]e-run cell' },
-      { '<leader>jo', '<cmd>noautocmd MoltenEnterOutput<cr>', desc = '[J]upyter [o]pen output' },
-      { '<leader>jh', '<cmd>MoltenHideOutput<cr>',        desc = '[J]upyter [h]ide output' },
-      { '<leader>jd', '<cmd>MoltenDelete<cr>',            desc = '[J]upyter [d]elete cell output' },
-      { '<leader>jx', '<cmd>MoltenInterrupt<cr>',         desc = '[J]upyter interrupt' },
-      { '<leader>jR', '<cmd>MoltenRestart!<cr>',          desc = '[J]upyter [R]estart kernel' },
-      { '<leader>jv', ':<C-u>MoltenEvaluateVisual<cr>gv', mode = 'v', desc = '[J]upyter run selection' },
+      -- kernel
+      { '<leader>jk', function() require('config.notebook').pick_kernel() end, desc = 'Pick [k]ernel' },
+      { '<leader>ji', '<cmd>MoltenInit<cr>',           desc = '[I]nit kernel (prompt)' },
+      { '<leader>jR', '<cmd>MoltenRestart!<cr>',       desc = '[R]estart kernel' },
+      { '<leader>jx', '<cmd>MoltenInterrupt<cr>',      desc = 'Interrupt' },
+      -- run
+      { '<leader>jc', function() require('config.notebook').run() end,     desc = 'Run [c]ell' },
+      { '<leader>ja', function() require('config.notebook').run_all() end, desc = 'Run [a]ll cells' },
+      { '<leader>jl', '<cmd>MoltenEvaluateLine<cr>',   desc = 'Run [l]ine' },
+      { '<leader>jv', ':<C-u>MoltenEvaluateVisual<cr>gv', mode = 'v', desc = 'Run selection' },
+      -- output
+      { '<leader>jo', '<cmd>noautocmd MoltenEnterOutput<cr>', desc = '[O]pen output' },
+      { '<leader>jh', '<cmd>MoltenHideOutput<cr>',     desc = '[H]ide output' },
+      { '<leader>jd', '<cmd>MoltenDelete<cr>',         desc = '[D]elete output' },
+      -- edit cells
+      { '<leader>jb', function() require('config.notebook').insert('python') end,      desc = 'New code cell [b]elow' },
+      { '<leader>jO', function() require('config.notebook').insert('python', true) end, desc = 'New code cell ab[O]ve' },
+      { '<leader>jm', function() require('config.notebook').insert(nil) end,            desc = 'New [m]arkdown cell' },
+      { '<leader>jK', function() require('config.notebook').move(-1) end,  desc = 'Move cell up' },
+      { '<leader>jJ', function() require('config.notebook').move(1) end,   desc = 'Move cell down' },
+      { '<leader>jD', function() require('config.notebook').delete() end,  desc = '[D]elete cell' },
+      { ']j', function() vim.cmd 'MoltenNext' end,  desc = 'Next cell output' },
+      { '[j', function() vim.cmd 'MoltenPrev' end,  desc = 'Previous cell output' },
     },
     config = function()
-      -- <leader>jc runs the markdown fenced block the cursor is inside — the
-      -- "run this cell" action. Treesitter gives us the block's exact range.
-      vim.keymap.set('n', '<leader>jc', function()
-        local node = vim.treesitter.get_node()
-        while node and node:type() ~= 'fenced_code_block' do
-          node = node:parent()
-        end
-        if not node then
-          vim.notify('Not inside a code cell', vim.log.levels.WARN)
-          return
-        end
-        local srow, _, erow, _ = node:range()
-        -- skip the ``` fence lines themselves
-        vim.cmd(string.format('%d,%dMoltenEvaluateRange', srow + 2, erow))
-      end, { desc = '[J]upyter run [c]ell', silent = true })
-
-      -- Status in the statusline comes free via lualine's diagnostics; nothing to do.
+      -- Notebook buffers get no line numbers and a sign column for the [n]
+      -- execution markers. Keyed off the jupytext-converted buffer, not the
+      -- markdown filetype, so ordinary .md files are untouched.
+      vim.api.nvim_create_autocmd('BufWinEnter', {
+        group = vim.api.nvim_create_augroup('notebook-attach', { clear = true }),
+        pattern = '*.ipynb',
+        callback = function(ev) require('config.notebook').attach(ev.buf) end,
+      })
     end,
   },
 }
