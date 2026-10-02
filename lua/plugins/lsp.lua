@@ -80,7 +80,7 @@ return {
       -- servers + their settings. Add more here; mason installs them on next :MasonToolsInstall / startup.
       local servers = {
         lua_ls = { settings = { Lua = { completion = { callSnippet = 'Replace' } } } },
-        clangd = { cmd = { 'clangd', '--background-index', '--clang-tidy', '--header-insertion=iwyu' } }, -- system clangd
+        clangd = { cmd = { 'clangd', '--background-index', '--clang-tidy', '--header-insertion=iwyu' } },
         basedpyright = {},
         bashls = {},
         jsonls = {},
@@ -89,8 +89,12 @@ return {
         vim.lsp.config(name, cfg)
       end
 
-      -- tools mason should install (clangd comes from the system package, so it's excluded)
-      local ensure = vim.tbl_filter(function(n) return n ~= 'clangd' end, vim.tbl_keys(servers))
+      -- Let mason install everything except servers already on PATH. On Arch
+      -- clangd comes from the `clang` package and on macOS from Xcode; if it is
+      -- missing on either, mason provides it, so this works on both.
+      local ensure = vim.tbl_filter(function(n)
+        return vim.fn.executable(n) == 0
+      end, vim.tbl_keys(servers))
       vim.list_extend(ensure, { 'stylua', 'clang-format', 'ruff' })
       require('mason-tool-installer').setup { ensure_installed = ensure }
 
@@ -98,7 +102,7 @@ return {
         ensure_installed = {},
         automatic_enable = true, -- vim.lsp.enable() for every mason-installed server
       }
-      vim.lsp.enable 'clangd' -- not mason-managed, enable explicitly
+      vim.lsp.enable 'clangd' -- enabled explicitly: it may come from the system rather than mason
     end,
   },
 }
