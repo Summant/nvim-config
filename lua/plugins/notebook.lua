@@ -20,6 +20,42 @@ return {
     },
   },
 
+  { -- Hide jupytext's YAML metadata header.
+    --
+    -- jupytext writes a `jupyter: / jupytext: / kernelspec:` block at the top of
+    -- the converted buffer. It is machine bookkeeping — VSCode never shows it —
+    -- but it has to stay in the text or the round-trip back to .ipynb loses the
+    -- kernel. So it is folded closed on open rather than removed: `zo` on the
+    -- fold reveals it if you ever need to edit it.
+    'nvim-lua/plenary.nvim',           -- already a dependency; used here only as a host
+    lazy = false,
+    config = function()
+      vim.api.nvim_create_autocmd({ 'BufWinEnter' }, {
+        group = vim.api.nvim_create_augroup('jupytext-fold-frontmatter', { clear = true }),
+        pattern = { '*.ipynb', '*.md' },
+        callback = function(ev)
+          local lines = vim.api.nvim_buf_get_lines(ev.buf, 0, 40, false)
+          if lines[1] ~= '---' then
+            return
+          end
+          -- only fold a block that is actually jupytext's, not a user's own front matter
+          local close
+          for i = 2, #lines do
+            if lines[i] == '---' then close = i break end
+          end
+          if not close then return end
+          local blob = table.concat(vim.list_slice(lines, 1, close), '\n')
+          if not blob:match 'jupytext' and not blob:match 'kernelspec' then return end
+
+          vim.wo.foldmethod = 'manual'
+          vim.wo.foldtext = "'  notebook metadata (' . (v:foldend - v:foldstart + 1) . ' lines) '"
+          vim.wo.fillchars = 'fold: '
+          vim.cmd(string.format('silent! %d,%dfold', 1, close))
+        end,
+      })
+    end,
+  },
+
   { -- inline images (plots, LaTeX) using kitty's graphics protocol
     '3rd/image.nvim',
     build = false,               -- magick_cli backend shells out to `magick`; no luarock needed
@@ -54,11 +90,12 @@ return {
       code = {
         sign = false,
         style = 'full',          -- language icon + name in the cell header
-        width = 'block',         -- cell is as wide as its content, like a notebook
+        width = 'full',          -- cell spans the window, like a notebook cell
         left_pad = 2,
         right_pad = 2,
-        min_width = 70,
         border = 'thick',
+        above = '▄',             -- solid top/bottom edges so each cell reads as a box
+        below = '▀',
         highlight = 'RMCodeBg',
         highlight_inline = 'RMCodeInline',
       },
