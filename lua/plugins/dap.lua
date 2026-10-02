@@ -1,4 +1,8 @@
--- Debugging (C/C++ via lldb-dap, from the `lldb` package). F5 run/continue, F10 over, F11 into, F12 out.
+-- Debugging (C/C++). F5 run/continue, F10 over, F11 into, F12 out.
+--
+-- The adapter binary differs per platform, so it is resolved at runtime:
+--   Linux — `lldb-dap` from Arch's `lldb` package
+--   macOS — inside the Xcode toolchain, located with `xcrun -f lldb-dap`
 return {
   'rcarriga/nvim-dap-ui',
   dependencies = { 'mfussenegger/nvim-dap', 'nvim-neotest/nvim-nio' },
@@ -16,7 +20,17 @@ return {
   config = function()
     local dap, dapui = require 'dap', require 'dapui'
 
-    dap.adapters.lldb = { type = 'executable', command = 'lldb-dap', name = 'lldb' }
+    local lldb = require('config.platform').lldb_dap()
+    if lldb then
+      dap.adapters.lldb = { type = 'executable', command = lldb, name = 'lldb' }
+    else
+      vim.notify(
+        'nvim-dap: no lldb-dap found.\n'
+          .. '  Arch:  sudo pacman -S lldb\n'
+          .. '  macOS: xcode-select --install',
+        vim.log.levels.WARN
+      )
+    end
     dap.configurations.cpp = {
       {
         name = 'Launch C++ file',
